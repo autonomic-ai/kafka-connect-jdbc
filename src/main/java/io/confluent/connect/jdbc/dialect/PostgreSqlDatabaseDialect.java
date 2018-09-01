@@ -76,9 +76,7 @@ public class PostgreSqlDatabaseDialect extends GenericDatabaseDialect {
 
   @Override
   public Connection getConnection() throws SQLException {
-    Connection connection = super.getConnection();
-    connection.setAutoCommit(false);
-    return connection;
+    return super.getConnection();
   }
 
   @Override
@@ -87,8 +85,10 @@ public class PostgreSqlDatabaseDialect extends GenericDatabaseDialect {
     log.trace("Creating a PreparedStatement '{}'", query);
 
     PreparedStatement stmt = db.prepareStatement(query);
-    int batchMaxRows = config.getInt(JdbcSourceTaskConfig.BATCH_MAX_ROWS_CONFIG);
+
+    final int batchMaxRows = config.getInt(JdbcSourceTaskConfig.BATCH_MAX_ROWS_CONFIG);
     log.trace("Initializing PreparedStatement fetch direction to FETCH_FORWARD for '{}'", stmt);
+    stmt.getConnection().setAutoCommit(false);
     stmt.setFetchDirection(ResultSet.FETCH_FORWARD);
     stmt.setFetchSize(batchMaxRows);
 

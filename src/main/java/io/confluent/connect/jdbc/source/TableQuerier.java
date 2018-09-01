@@ -25,6 +25,8 @@ import java.sql.SQLException;
 
 import io.confluent.connect.jdbc.dialect.DatabaseDialect;
 import io.confluent.connect.jdbc.util.TableId;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * TableQuerier executes queries against a specific table. Implementations handle different types
@@ -32,6 +34,10 @@ import io.confluent.connect.jdbc.util.TableId;
  * loads using timestamps, etc.
  */
 abstract class TableQuerier implements Comparable<TableQuerier> {
+
+  private static final Logger log = LoggerFactory.getLogger(TableQuerier.class);
+
+
   public enum QueryMode {
     TABLE, // Copying whole tables, with queries constructed automatically
     QUERY // User-specified query
@@ -112,8 +118,10 @@ abstract class TableQuerier implements Comparable<TableQuerier> {
     if (stmt != null) {
       try {
         stmt.close();
-      } catch (SQLException ignored) {
-        // intentionally ignored
+      } catch (SQLException e) {
+        log.warn("failed to close statement quietly, {}, {}",
+                 e.getClass().getName(),
+                 e.getMessage());
       }
     }
     stmt = null;
@@ -123,8 +131,10 @@ abstract class TableQuerier implements Comparable<TableQuerier> {
     if (resultSet != null) {
       try {
         resultSet.close();
-      } catch (SQLException ignored) {
-        // intentionally ignored
+      } catch (SQLException e) {
+        log.warn("failed to close resultSet quietly, {}, {}",
+                 e.getClass().getName(),
+                 e.getMessage());
       }
     }
     resultSet = null;
