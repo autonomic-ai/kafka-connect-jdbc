@@ -119,9 +119,9 @@ abstract class TableQuerier implements Comparable<TableQuerier> {
       try {
         stmt.close();
       } catch (SQLException e) {
-        log.error("failed to close statement quietly, {}, {}",
-                  e.getClass().getName(),
-                  e.getMessage());
+        log.warn("failed to close statement quietly, {}, {}",
+                 e.getClass().getName(),
+                 e.getMessage());
       }
     }
     stmt = null;
@@ -132,9 +132,9 @@ abstract class TableQuerier implements Comparable<TableQuerier> {
       try {
         resultSet.close();
       } catch (SQLException e) {
-        log.error("failed to close resultSet quietly, {}, {}",
-                  e.getClass().getName(),
-                  e.getMessage());
+        log.warn("failed to close resultSet quietly, {}, {}",
+                 e.getClass().getName(),
+                 e.getMessage());
       }
     }
     resultSet = null;
