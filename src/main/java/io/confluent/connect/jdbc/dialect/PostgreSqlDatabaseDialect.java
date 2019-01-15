@@ -64,6 +64,7 @@ public class PostgreSqlDatabaseDialect extends GenericDatabaseDialect {
 
   private static final String JSON_TYPE_NAME = "json";
   private static final String JSONB_TYPE_NAME = "jsonb";
+  protected static final int DEFAULT_LIMIT = 100_000;
 
   /**
    * Create a new dialect instance with the given connector configuration.
@@ -95,6 +96,10 @@ public class PostgreSqlDatabaseDialect extends GenericDatabaseDialect {
     return PreparedStatementProxy.newInstance(stmt);
   }
 
+  @Override
+  protected void initializePreparedStatement(PreparedStatement stmt) throws SQLException {
+    stmt.setMaxRows(DEFAULT_LIMIT);
+  }
 
   @Override
   public String addFieldToSchema(
