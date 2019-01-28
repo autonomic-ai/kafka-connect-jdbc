@@ -64,7 +64,7 @@ public class PostgreSqlDatabaseDialect extends GenericDatabaseDialect {
 
   private static final String JSON_TYPE_NAME = "json";
   private static final String JSONB_TYPE_NAME = "jsonb";
-  protected static final int DEFAULT_LIMIT = 100_000;
+  protected static final int DEFAULT_LIMIT = 10_000;
 
   /**
    * Create a new dialect instance with the given connector configuration.
