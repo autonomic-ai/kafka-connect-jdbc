@@ -85,7 +85,7 @@ public class JdbcSourceConnectorConfig extends AbstractConfig {
   private static final String BATCH_MAX_ROWS_DOC =
       "Maximum number of rows to include in a single batch when polling for new data. This "
       + "setting can be used to limit the amount of data buffered internally in the connector.";
-  public static final int BATCH_MAX_ROWS_DEFAULT = 100;
+  public static final int BATCH_MAX_ROWS_DEFAULT = 1000;
   private static final String BATCH_MAX_ROWS_DISPLAY = "Max Rows Per Batch";
 
   public static final String NUMERIC_PRECISION_MAPPING_CONFIG = "numeric.precision.mapping";
@@ -153,6 +153,7 @@ public class JdbcSourceConnectorConfig extends AbstractConfig {
   public static final String MODE_BULK = "bulk";
   public static final String MODE_TIMESTAMP = "timestamp";
   public static final String MODE_INCREMENTING = "incrementing";
+  public static final String MODE_INCREMENTING_WITH_LIMIT = "incrementing+limit";
   public static final String MODE_TIMESTAMP_INCREMENTING = "timestamp+incrementing";
 
   public static final String INCREMENTING_COLUMN_NAME_CONFIG = "incrementing.column.name";
@@ -246,6 +247,7 @@ public class JdbcSourceConnectorConfig extends AbstractConfig {
       + " from the last time we fetched until current time minus the delay.";
   public static final long TIMESTAMP_DELAY_INTERVAL_MS_DEFAULT = 0;
   private static final String TIMESTAMP_DELAY_INTERVAL_MS_DISPLAY = "Delay Interval (ms)";
+
 
   public static final String DATABASE_GROUP = "Database";
   public static final String MODE_GROUP = "Mode";
@@ -432,7 +434,8 @@ public class JdbcSourceConnectorConfig extends AbstractConfig {
             MODE_BULK,
             MODE_TIMESTAMP,
             MODE_INCREMENTING,
-            MODE_TIMESTAMP_INCREMENTING
+            MODE_TIMESTAMP_INCREMENTING,
+            MODE_INCREMENTING_WITH_LIMIT
         ),
         Importance.HIGH,
         MODE_DOC,
@@ -674,6 +677,9 @@ public class JdbcSourceConnectorConfig extends AbstractConfig {
         case MODE_TIMESTAMP:
           return name.equals(TIMESTAMP_COLUMN_NAME_CONFIG) || name.equals(VALIDATE_NON_NULL_CONFIG);
         case MODE_INCREMENTING:
+          return name.equals(INCREMENTING_COLUMN_NAME_CONFIG)
+                 || name.equals(VALIDATE_NON_NULL_CONFIG);
+        case MODE_INCREMENTING_WITH_LIMIT:
           return name.equals(INCREMENTING_COLUMN_NAME_CONFIG)
                  || name.equals(VALIDATE_NON_NULL_CONFIG);
         case MODE_TIMESTAMP_INCREMENTING:

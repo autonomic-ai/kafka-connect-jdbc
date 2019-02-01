@@ -321,5 +321,4 @@ public class TimestampIncrementingCriteria {
     coalesceTimestampColumns(builder);
     builder.append(" ASC");
   }
-
 }

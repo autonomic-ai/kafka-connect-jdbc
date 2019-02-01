@@ -64,7 +64,6 @@ public class PostgreSqlDatabaseDialect extends GenericDatabaseDialect {
 
   private static final String JSON_TYPE_NAME = "json";
   private static final String JSONB_TYPE_NAME = "jsonb";
-  protected static final int DEFAULT_LIMIT = 100_000;
 
   /**
    * Create a new dialect instance with the given connector configuration.
@@ -84,21 +83,18 @@ public class PostgreSqlDatabaseDialect extends GenericDatabaseDialect {
   public PreparedStatement createPreparedStatement(Connection db, String query)
           throws SQLException {
     log.trace("Creating a PreparedStatement '{}'", query);
-
     PreparedStatement stmt = db.prepareStatement(query);
-
-    final int batchMaxRows = config.getInt(JdbcSourceTaskConfig.BATCH_MAX_ROWS_CONFIG);
-    log.trace("Initializing PreparedStatement fetch direction to FETCH_FORWARD for '{}'", stmt);
-    stmt.getConnection().setAutoCommit(false);
-    stmt.setFetchDirection(ResultSet.FETCH_FORWARD);
-    stmt.setFetchSize(batchMaxRows);
-
+    this.initializePreparedStatement(stmt);
     return PreparedStatementProxy.newInstance(stmt);
   }
 
   @Override
   protected void initializePreparedStatement(PreparedStatement stmt) throws SQLException {
-    stmt.setMaxRows(DEFAULT_LIMIT);
+    final int batchMaxRows = config.getInt(JdbcSourceTaskConfig.BATCH_MAX_ROWS_CONFIG);
+    stmt.getConnection().setAutoCommit(false);
+    stmt.setFetchDirection(ResultSet.FETCH_FORWARD);
+    stmt.setFetchSize(batchMaxRows);
+    log.trace("Initialized PreparedStatement '{}' with max rows {}", stmt, batchMaxRows);
   }
 
   @Override
