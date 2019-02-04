@@ -16,10 +16,16 @@
 
 package io.confluent.connect.jdbc.source;
 
+import io.confluent.connect.jdbc.dialect.DerbyDatabaseDialect;
+import io.confluent.connect.jdbc.source.TableQuerier.QueryMode;
 import io.confluent.connect.jdbc.util.DateTimeUtils;
+import java.util.ArrayList;
 import org.apache.kafka.connect.data.Struct;
 import org.apache.kafka.connect.errors.ConnectException;
 import org.apache.kafka.connect.source.SourceRecord;
+import org.apache.kafka.connect.storage.OffsetStorageReader;
+import org.easymock.EasyMock;
+import org.easymock.Mock;
 import org.junit.After;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -37,6 +43,7 @@ import java.util.List;
 import java.util.Map;
 
 import static org.junit.Assert.assertEquals;
+import static org.powermock.api.easymock.PowerMock.expectNew;
 
 // Tests of polling that return data updates, i.e. verifies the different behaviors for getting
 // incremental data updates from the database
@@ -244,7 +251,7 @@ public class JdbcSourceTaskUpdateTest extends JdbcSourceTaskTestBase {
 
     db.insert(SINGLE_TABLE_NAME, "modified", DateTimeUtils.formatUtcTimestamp(new Timestamp(10L)), "id", 1);
 
-    startTask("modified", null, null, 4L);
+    startTaskWithDelay("modified", null, null, 4L);
     verifyTimestampFirstPoll(TOPIC_PREFIX + SINGLE_TABLE_NAME);
 
     Long currentTime = new Date().getTime();
@@ -573,6 +580,39 @@ public class JdbcSourceTaskUpdateTest extends JdbcSourceTaskTestBase {
   }
 
   @Test
+  public void testIncrementingLimitConfig() throws Exception {
+    List<Map<String, String>> partitions = new ArrayList<>(1);
+    partitions.add(Collections.singletonMap(
+        JdbcSourceConnectorConstants.QUERY_NAME_KEY,
+        JdbcSourceConnectorConstants.QUERY_NAME_VALUE));
+    OffsetStorageReader reader = EasyMock.createMock(OffsetStorageReader.class);
+    EasyMock.expect(taskContext.offsetStorageReader()).andReturn(reader);
+    EasyMock.expect(reader.offsets(partitions)).andReturn(null);
+    TimestampIncrementingTableQuerier querier =
+    EasyMock.createMock(TimestampIncrementingTableQuerier.class);
+    String query = "SELECT \"test\".\"id\" FROM \"test\"";
+    expectNew(TimestampIncrementingTableQuerier.class,
+              null,
+              EasyMock.anyObject(DerbyDatabaseDialect.class),
+              EasyMock.eq(QueryMode.QUERY),
+              EasyMock.eq(query),
+              EasyMock.eq("test-"),
+              EasyMock.eq(null),
+              EasyMock.eq("id"),
+              EasyMock.eq(null),
+              EasyMock.eq(0L),
+              EasyMock.eq(JdbcSourceTaskConfig.BATCH_MAX_ROWS_DEFAULT)).andReturn(querier);
+
+
+    PowerMock.replayAll();
+    // Manage these manually so we can verify the emitted values
+    db.createTable(SINGLE_TABLE_NAME, "id", "INT");
+    db.insert(SINGLE_TABLE_NAME, "id", 1);
+
+    startTaskWithLimit(null, "id", query, 10);
+  }
+
+  @Test
   public void testCustomQueryWithTimestamp() throws Exception {
     expectInitializeNoOffsets(Arrays.asList(JOIN_QUERY_PARTITION));
 
@@ -609,17 +649,39 @@ public class JdbcSourceTaskUpdateTest extends JdbcSourceTaskTestBase {
   }
 
   private void startTask(String timestampColumn, String incrementingColumn, String query) {
-    startTask(timestampColumn, incrementingColumn, query, 0L);
+    startTask(timestampColumn, incrementingColumn, query, 0L, 0);
   }
 
-  private void startTask(String timestampColumn, String incrementingColumn, String query, Long delay) {
+  private void startTaskWithDelay(String timestampColumn,
+                                  String incrementingColumn,
+                                  String query,
+                                  Long delay) {
+    startTask(timestampColumn, incrementingColumn, query, delay, 0);
+  }
+
+  private void startTaskWithLimit(String timestampColumn,
+                                  String incrementingColumn,
+                                  String query,
+                                  int limit) {
+    startTask(timestampColumn, incrementingColumn, query, 0L, limit);
+  }
+
+  private void startTask(String timestampColumn,
+                         String incrementingColumn,
+                         String query,
+                         Long delay,
+                         int limit) {
     String mode = null;
     if (timestampColumn != null && incrementingColumn != null) {
       mode = JdbcSourceConnectorConfig.MODE_TIMESTAMP_INCREMENTING;
     } else if (timestampColumn != null) {
       mode = JdbcSourceConnectorConfig.MODE_TIMESTAMP;
     } else if (incrementingColumn != null) {
-      mode = JdbcSourceConnectorConfig.MODE_INCREMENTING;
+      if (limit > 0) {
+        mode = JdbcSourceConnectorConfig.MODE_INCREMENTING_WITH_LIMIT;
+      } else {
+        mode = JdbcSourceConnectorConfig.MODE_INCREMENTING;
+      }
     } else {
       mode = JdbcSourceConnectorConfig.MODE_BULK;
     }
