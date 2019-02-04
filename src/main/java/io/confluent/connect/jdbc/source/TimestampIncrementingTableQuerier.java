@@ -70,12 +70,14 @@ public class TimestampIncrementingTableQuerier extends TableQuerier implements C
   private TimestampIncrementingCriteria criteria;
   private final Map<String, String> partition;
   private final String topic;
+  private final int rowLimit;
 
   public TimestampIncrementingTableQuerier(DatabaseDialect dialect, QueryMode mode, String name,
                                            String topicPrefix,
                                            List<String> timestampColumnNames,
                                            String incrementingColumnName,
-                                           Map<String, Object> offsetMap, Long timestampDelay) {
+                                           Map<String, Object> offsetMap, Long timestampDelay,
+                                           int limit) {
     super(dialect, mode, name, topicPrefix);
     this.incrementingColumnName = incrementingColumnName;
     this.timestampColumnNames = timestampColumnNames != null
@@ -104,6 +106,7 @@ public class TimestampIncrementingTableQuerier extends TableQuerier implements C
       default:
         throw new ConnectException("Unexpected query mode: " + mode);
     }
+    this.rowLimit = limit;
   }
 
   @Override
@@ -131,6 +134,9 @@ public class TimestampIncrementingTableQuerier extends TableQuerier implements C
     // Append the criteria using the columns ...
     criteria = dialect.criteriaFor(incrementingColumn, timestampColumns);
     criteria.whereClause(builder);
+    if (rowLimit > 0) {
+      builder.append(" LIMIT " + rowLimit);
+    }
 
     String queryString = builder.toString();
     log.debug("{} prepared SQL query: {}", this, queryString);

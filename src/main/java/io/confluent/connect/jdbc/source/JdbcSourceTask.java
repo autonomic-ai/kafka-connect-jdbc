@@ -112,6 +112,7 @@ public class JdbcSourceTask extends SourceTask {
     Map<String, List<Map<String, String>>> partitionsByTableFqn = new HashMap<>();
     Map<Map<String, String>, Map<String, Object>> offsets = null;
     if (mode.equals(JdbcSourceTaskConfig.MODE_INCREMENTING)
+        || mode.equals(JdbcSourceTaskConfig.MODE_INCREMENTING_WITH_LIMIT)
         || mode.equals(JdbcSourceTaskConfig.MODE_TIMESTAMP)
         || mode.equals(JdbcSourceTaskConfig.MODE_TIMESTAMP_INCREMENTING)) {
       List<Map<String, String>> partitions = new ArrayList<>(tables.size());
@@ -201,7 +202,8 @@ public class JdbcSourceTask extends SourceTask {
                 null,
                 incrementingColumn,
                 offset,
-                timestampDelayInterval
+                timestampDelayInterval,
+                0
             )
         );
       } else if (mode.equals(JdbcSourceTaskConfig.MODE_TIMESTAMP)) {
@@ -214,7 +216,8 @@ public class JdbcSourceTask extends SourceTask {
                 timestampColumns,
                 null,
                 offset,
-                timestampDelayInterval
+                timestampDelayInterval,
+                0
             )
         );
       } else if (mode.endsWith(JdbcSourceTaskConfig.MODE_TIMESTAMP_INCREMENTING)) {
@@ -227,7 +230,23 @@ public class JdbcSourceTask extends SourceTask {
                 timestampColumns,
                 incrementingColumn,
                 offset,
-                timestampDelayInterval
+                timestampDelayInterval,
+                0
+            )
+        );
+      } else if (mode.equals(JdbcSourceTaskConfig.MODE_INCREMENTING_WITH_LIMIT)) {
+        int rowLimit = config.getInt(JdbcSourceTaskConfig.BATCH_MAX_ROWS_CONFIG);
+        tableQueue.add(
+            new TimestampIncrementingTableQuerier(
+                dialect,
+                queryMode,
+                tableOrQuery,
+                topicPrefix,
+                null,
+                incrementingColumn,
+                offset,
+                timestampDelayInterval,
+                rowLimit
             )
         );
       }
@@ -367,6 +386,7 @@ public class JdbcSourceTask extends SourceTask {
       // for table-based copying because custom query mode doesn't allow this to be looked up
       // without a query or parsing the query since we don't have a table name.
       if ((incrementalMode.equals(JdbcSourceConnectorConfig.MODE_INCREMENTING)
+           || incrementalMode.equals(JdbcSourceConnectorConfig.MODE_INCREMENTING_WITH_LIMIT)
            || incrementalMode.equals(JdbcSourceConnectorConfig.MODE_TIMESTAMP_INCREMENTING))
           && incrementingOptional) {
         throw new ConnectException("Cannot make incremental queries using incrementing column "
